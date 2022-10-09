@@ -2,6 +2,7 @@ use std::{collections::HashSet, fmt::Display};
 
 use crate::Component;
 
+#[derive(Clone)]
 pub struct Scene {
     components: Vec<Component>,
     changed: HashSet<usize>,
@@ -83,12 +84,13 @@ impl Scene {
         false
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self) -> bool {
         assert!(
             !self.has_cyclic_dependency(),
             "There were cyclic connections"
         );
         let mut needs_update_next_frame = HashSet::new();
+        let had_changes = self.changed.len() > 0;
         while let Some(&id) = self.changed.iter().next() {
             self.changed.remove(&id);
             match &mut self.components[id] {
@@ -121,6 +123,9 @@ impl Scene {
                     if !needs_update_next_frame.contains(&id) {
                         let old_state = *state_last_frame;
                         *state_last_frame = input.state;
+                        if old_state != *state_last_frame {
+                            needs_update_next_frame.insert(id);
+                        }
                         if let Some(output) = *output {
                             let input_output = &mut self.components[output.component]
                                 .get_inputs_mut()[output.index];
@@ -130,11 +135,11 @@ impl Scene {
                             }
                         }
                     }
-                    needs_update_next_frame.insert(id);
                 }
             }
         }
         self.changed.extend(needs_update_next_frame.iter());
+        had_changes
     }
 }
 

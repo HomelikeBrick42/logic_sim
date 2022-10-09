@@ -17,12 +17,16 @@ fn main() {
     println!("Before Update:");
     println!("{scene}");
     println!();
-    scene.update();
-    println!("After Update:");
+    dbg!(scene.update());
+    println!("After Update 1:");
     println!("{scene}");
     println!();
-    scene.update();
+    dbg!(scene.update());
     println!("After Update 2:");
+    println!("{scene}");
+    println!();
+    dbg!(scene.update());
+    println!("After Update 3:");
     println!("{scene}");
     println!();
     if let Component::Delay {
@@ -35,11 +39,15 @@ fn main() {
     } else {
         unreachable!()
     }
-    scene.update();
-    println!("After Update 3:");
+    dbg!(scene.update());
+    println!("After Update 4:");
     println!("{scene}");
     println!();
-    scene.update();
-    println!("After Update 4:");
+    dbg!(scene.update());
+    println!("After Update 5:");
+    println!("{scene}");
+    println!();
+    dbg!(scene.update());
+    println!("After Update 6:");
     println!("{scene}");
 }

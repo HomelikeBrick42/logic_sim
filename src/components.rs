@@ -13,7 +13,7 @@ pub struct Output {
     pub index: usize,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub enum Component {
     Not {
         input: Input,
@@ -31,7 +31,7 @@ pub enum Component {
 }
 
 impl Component {
-    pub fn get_name(&self) -> &'static str {
+    pub fn get_name(&self) -> &str {
         match self {
             Component::Not {
                 input: _,
