@@ -23,6 +23,11 @@ pub enum Component {
         inputs: [Input; 2],
         output: Option<Output>,
     },
+    Delay {
+        input: Input,
+        output: Option<Output>,
+        state_last_frame: bool,
+    },
 }
 
 impl Component {
@@ -36,6 +41,22 @@ impl Component {
                 inputs: _,
                 output: _,
             } => "Or",
+            Component::Delay {
+                input: _,
+                output: _,
+                state_last_frame: _,
+            } => "Delay",
+        }
+    }
+
+    pub fn ignore_cyclic(&self) -> bool {
+        match self {
+            Component::Delay {
+                input: _,
+                output: _,
+                state_last_frame: _,
+            } => true,
+            _ => false,
         }
     }
 
@@ -43,6 +64,11 @@ impl Component {
         match self {
             Component::Not { input, output: _ } => std::array::from_ref(input),
             Component::Or { inputs, output: _ } => inputs,
+            Component::Delay {
+                input,
+                output: _,
+                state_last_frame: _,
+            } => std::array::from_ref(input),
         }
     }
 
@@ -50,6 +76,11 @@ impl Component {
         match self {
             Component::Not { input, output: _ } => std::array::from_mut(input),
             Component::Or { inputs, output: _ } => inputs,
+            Component::Delay {
+                input,
+                output: _,
+                state_last_frame: _,
+            } => std::array::from_mut(input),
         }
     }
 
@@ -57,6 +88,11 @@ impl Component {
         match self {
             Component::Not { input: _, output } => std::array::from_ref(output),
             Component::Or { inputs: _, output } => std::array::from_ref(output),
+            Component::Delay {
+                input: _,
+                output,
+                state_last_frame: _,
+            } => std::array::from_ref(output),
         }
     }
 
@@ -64,6 +100,11 @@ impl Component {
         match self {
             Component::Not { input: _, output } => std::array::from_mut(output),
             Component::Or { inputs: _, output } => std::array::from_mut(output),
+            Component::Delay {
+                input: _,
+                output,
+                state_last_frame: _,
+            } => std::array::from_mut(output),
         }
     }
 }

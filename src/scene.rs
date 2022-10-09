@@ -44,10 +44,6 @@ impl Scene {
         let id = self.components.len();
         self.components.push(component);
         self.changed.insert(id);
-        assert!(
-            !self.has_cyclic_dependency(),
-            "There were cyclic connections"
-        );
         id
     }
 
@@ -55,20 +51,33 @@ impl Scene {
         &self.components[id]
     }
 
+    pub fn get_component_mut(&mut self, id: usize) -> &mut Component {
+        self.changed.insert(id);
+        &mut self.components[id]
+    }
+
     pub fn has_cyclic_dependency(&self) -> bool {
-        let mut checked = HashSet::new();
         let mut to_check = (0..self.components.len()).collect::<HashSet<_>>();
-        while let Some(&id) = to_check.iter().next() {
-            to_check.remove(&id);
-            if !checked.insert(id) {
-                return true;
-            }
-            for output in self.components[id]
-                .get_outputs()
-                .iter()
-                .filter_map(|output| *output)
-            {
-                to_check.insert(output.component);
+        while to_check.len() > 0 {
+            let mut to_check_this_iteration = HashSet::from([{
+                let element = *to_check.iter().next().unwrap();
+                to_check.remove(&element);
+                element
+            }]);
+            let mut checked = HashSet::new();
+            while let Some(&id) = to_check_this_iteration.iter().next() {
+                to_check_this_iteration.remove(&id);
+                if !checked.insert(id) {
+                    return true;
+                }
+                for output in self.components[id]
+                    .get_outputs()
+                    .iter()
+                    .filter_map(|output| *output)
+                {
+                    to_check_this_iteration.insert(output.component);
+                    to_check.remove(&output.component);
+                }
             }
         }
         false
@@ -79,10 +88,11 @@ impl Scene {
             !self.has_cyclic_dependency(),
             "There were cyclic connections"
         );
+        let mut needs_update_next_frame = HashSet::new();
         while let Some(&id) = self.changed.iter().next() {
             self.changed.remove(&id);
-            match self.components[id] {
-                Component::Not { input, output } => {
+            match &mut self.components[id] {
+                &mut Component::Not { input, output } => {
                     if let Some(output) = output {
                         let input_output =
                             &mut self.components[output.component].get_inputs_mut()[output.index];
@@ -92,7 +102,7 @@ impl Scene {
                         }
                     }
                 }
-                Component::Or { inputs, output } => {
+                &mut Component::Or { inputs, output } => {
                     if let Some(output) = output {
                         let input_output =
                             &mut self.components[output.component].get_inputs_mut()[output.index];
@@ -103,8 +113,28 @@ impl Scene {
                         }
                     }
                 }
+                Component::Delay {
+                    input,
+                    output,
+                    state_last_frame,
+                } => {
+                    if !needs_update_next_frame.contains(&id) {
+                        let old_state = *state_last_frame;
+                        *state_last_frame = input.state;
+                        if let Some(output) = *output {
+                            let input_output = &mut self.components[output.component]
+                                .get_inputs_mut()[output.index];
+                            input_output.state = old_state;
+                            if input_output.state != old_state {
+                                self.changed.insert(output.component);
+                            }
+                        }
+                    }
+                    needs_update_next_frame.insert(id);
+                }
             }
         }
+        self.changed.extend(needs_update_next_frame.iter());
     }
 }
 
