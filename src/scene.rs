@@ -68,7 +68,7 @@ impl Scene {
             let mut checked = HashSet::new();
             while let Some(&id) = to_check_this_iteration.iter().next() {
                 to_check_this_iteration.remove(&id);
-                if !checked.insert(id) {
+                if !self.components[id].ignore_cyclic() && !checked.insert(id) {
                     return true;
                 }
                 for output in self.components[id]
