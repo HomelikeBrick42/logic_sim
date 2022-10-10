@@ -1,4 +1,5 @@
-use derive_more::Display;
+use derive_more::{Display, IsVariant};
+use enum_as_inner::EnumAsInner;
 
 #[derive(Clone, Copy, Display)]
 #[display(fmt = "{}", "if *state { \"on\" } else { \"off\" }")]
@@ -13,7 +14,7 @@ pub struct Output {
     pub index: usize,
 }
 
-#[derive(Clone)]
+#[derive(Clone, IsVariant, EnumAsInner)]
 pub enum Component {
     Not {
         input: Input,

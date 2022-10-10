@@ -29,16 +29,12 @@ fn main() {
     println!("After Update 3:");
     println!("{scene}");
     println!();
-    if let Component::Delay {
-        input,
-        output: _,
-        state_last_frame: _,
-    } = scene.get_component_mut(delay)
-    {
-        input.state = false;
-    } else {
-        unreachable!()
-    }
+    scene
+        .get_component_mut(delay)
+        .as_delay_mut()
+        .unwrap()
+        .0
+        .state = false;
     dbg!(scene.update());
     println!("After Update 4:");
     println!("{scene}");
