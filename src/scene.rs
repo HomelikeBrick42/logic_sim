@@ -1,6 +1,12 @@
 use std::{collections::HashSet, fmt::Display};
 
-use crate::Component;
+use derive_more::Display;
+
+use crate::{Component, ComponentType};
+
+#[derive(Clone, Copy, Display, PartialEq, Eq)]
+#[display(fmt = "{_0}")]
+pub struct ComponentID(usize);
 
 #[derive(Clone)]
 pub struct Scene {
@@ -41,20 +47,20 @@ impl Scene {
         Default::default()
     }
 
-    pub fn add_component(&mut self, component: Component) -> usize {
+    pub fn add_component(&mut self, component: Component) -> ComponentID {
         let id = self.components.len();
         self.components.push(component);
         self.changed.insert(id);
-        id
+        ComponentID(id)
     }
 
-    pub fn get_component(&self, id: usize) -> &Component {
-        &self.components[id]
+    pub fn get_component(&self, id: ComponentID) -> &Component {
+        &self.components[id.0]
     }
 
-    pub fn get_component_mut(&mut self, id: usize) -> &mut Component {
-        self.changed.insert(id);
-        &mut self.components[id]
+    pub fn get_component_mut(&mut self, id: ComponentID) -> &mut Component {
+        self.changed.insert(id.0);
+        &mut self.components[id.0]
     }
 
     pub fn has_cyclic_dependency(&self) -> bool {
@@ -68,7 +74,10 @@ impl Scene {
             let mut checked = HashSet::new();
             while let Some(&id) = to_check_this_iteration.iter().next() {
                 to_check_this_iteration.remove(&id);
-                if !self.components[id].ignore_cyclic() && !checked.insert(id) {
+                if self.components[id].ignore_cyclic() {
+                    continue;
+                }
+                if !checked.insert(id) {
                     return true;
                 }
                 for output in self.components[id]
@@ -76,8 +85,8 @@ impl Scene {
                     .iter()
                     .filter_map(|output| *output)
                 {
-                    to_check_this_iteration.insert(output.component);
-                    to_check.remove(&output.component);
+                    to_check_this_iteration.insert(output.component.0);
+                    to_check.remove(&output.component.0);
                 }
             }
         }
@@ -93,29 +102,29 @@ impl Scene {
         let had_changes = self.changed.len() > 0;
         while let Some(&id) = self.changed.iter().next() {
             self.changed.remove(&id);
-            match &mut self.components[id] {
-                &mut Component::Not { input, output } => {
+            match &mut self.components[id].typ {
+                &mut ComponentType::Not { input, output } => {
                     if let Some(output) = output {
                         let input_output =
-                            &mut self.components[output.component].get_inputs_mut()[output.index];
+                            &mut self.components[output.component.0].get_inputs_mut()[output.index];
                         if input_output.state == input.state {
                             input_output.state = !input.state;
-                            self.changed.insert(output.component);
+                            self.changed.insert(output.component.0);
                         }
                     }
                 }
-                &mut Component::Or { inputs, output } => {
+                &mut ComponentType::Or { inputs, output } => {
                     if let Some(output) = output {
                         let input_output =
-                            &mut self.components[output.component].get_inputs_mut()[output.index];
+                            &mut self.components[output.component.0].get_inputs_mut()[output.index];
                         let old_state = input_output.state;
                         input_output.state = inputs.iter().any(|input| input.state);
                         if input_output.state != old_state {
-                            self.changed.insert(output.component);
+                            self.changed.insert(output.component.0);
                         }
                     }
                 }
-                Component::Delay {
+                ComponentType::Delay {
                     input,
                     output,
                     state_last_frame,
@@ -127,11 +136,13 @@ impl Scene {
                             needs_update_next_frame.insert(id);
                         }
                         if let Some(output) = *output {
-                            let input_output = &mut self.components[output.component]
+                            let input_output = &mut self.components[output.component.0]
                                 .get_inputs_mut()[output.index];
-                            input_output.state = old_state;
                             if input_output.state != old_state {
-                                self.changed.insert(output.component);
+                                input_output.state = old_state;
+                                if output.component.0 != id {
+                                    self.changed.insert(output.component.0);
+                                }
                             }
                         }
                     }
@@ -149,5 +160,15 @@ impl Default for Scene {
             components: Default::default(),
             changed: Default::default(),
         }
+    }
+}
+
+impl IntoIterator for &Scene {
+    type Item = ComponentID;
+
+    type IntoIter = std::iter::Map<std::ops::Range<usize>, fn(usize) -> ComponentID>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        (0..self.components.len()).map(|id| ComponentID(id))
     }
 }

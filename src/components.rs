@@ -1,6 +1,8 @@
 use derive_more::{Display, IsVariant};
 use enum_as_inner::EnumAsInner;
 
+use crate::ComponentID;
+
 #[derive(Clone, Copy, Display)]
 #[display(fmt = "{}", "if *state { \"on\" } else { \"off\" }")]
 pub struct Input {
@@ -10,12 +12,12 @@ pub struct Input {
 #[derive(Clone, Copy, Display)]
 #[display(fmt = "Component {component}, Input {index}")]
 pub struct Output {
-    pub component: usize,
+    pub component: ComponentID,
     pub index: usize,
 }
 
 #[derive(Clone, IsVariant, EnumAsInner)]
-pub enum Component {
+pub enum ComponentType {
     Not {
         input: Input,
         output: Option<Output>,
@@ -31,18 +33,24 @@ pub enum Component {
     },
 }
 
+#[derive(Clone)]
+pub struct Component {
+    pub typ: ComponentType,
+    pub position: raylib::math::Vector2,
+}
+
 impl Component {
     pub fn get_name(&self) -> &str {
-        match self {
-            Component::Not {
+        match &self.typ {
+            ComponentType::Not {
                 input: _,
                 output: _,
             } => "Not",
-            Component::Or {
+            ComponentType::Or {
                 inputs: _,
                 output: _,
             } => "Or",
-            Component::Delay {
+            ComponentType::Delay {
                 input: _,
                 output: _,
                 state_last_frame: _,
@@ -51,8 +59,8 @@ impl Component {
     }
 
     pub fn ignore_cyclic(&self) -> bool {
-        match self {
-            Component::Delay {
+        match &self.typ {
+            ComponentType::Delay {
                 input: _,
                 output: _,
                 state_last_frame: _,
@@ -62,10 +70,10 @@ impl Component {
     }
 
     pub fn get_inputs(&self) -> &[Input] {
-        match self {
-            Component::Not { input, output: _ } => std::array::from_ref(input),
-            Component::Or { inputs, output: _ } => inputs,
-            Component::Delay {
+        match &self.typ {
+            ComponentType::Not { input, output: _ } => std::array::from_ref(input),
+            ComponentType::Or { inputs, output: _ } => inputs,
+            ComponentType::Delay {
                 input,
                 output: _,
                 state_last_frame: _,
@@ -74,10 +82,10 @@ impl Component {
     }
 
     pub fn get_inputs_mut(&mut self) -> &mut [Input] {
-        match self {
-            Component::Not { input, output: _ } => std::array::from_mut(input),
-            Component::Or { inputs, output: _ } => inputs,
-            Component::Delay {
+        match &mut self.typ {
+            ComponentType::Not { input, output: _ } => std::array::from_mut(input),
+            ComponentType::Or { inputs, output: _ } => inputs,
+            ComponentType::Delay {
                 input,
                 output: _,
                 state_last_frame: _,
@@ -86,10 +94,10 @@ impl Component {
     }
 
     pub fn get_outputs(&self) -> &[Option<Output>] {
-        match self {
-            Component::Not { input: _, output } => std::array::from_ref(output),
-            Component::Or { inputs: _, output } => std::array::from_ref(output),
-            Component::Delay {
+        match &self.typ {
+            ComponentType::Not { input: _, output } => std::array::from_ref(output),
+            ComponentType::Or { inputs: _, output } => std::array::from_ref(output),
+            ComponentType::Delay {
                 input: _,
                 output,
                 state_last_frame: _,
@@ -98,10 +106,10 @@ impl Component {
     }
 
     pub fn get_outputs_mut(&mut self) -> &mut [Option<Output>] {
-        match self {
-            Component::Not { input: _, output } => std::array::from_mut(output),
-            Component::Or { inputs: _, output } => std::array::from_mut(output),
-            Component::Delay {
+        match &mut self.typ {
+            ComponentType::Not { input: _, output } => std::array::from_mut(output),
+            ComponentType::Or { inputs: _, output } => std::array::from_mut(output),
+            ComponentType::Delay {
                 input: _,
                 output,
                 state_last_frame: _,

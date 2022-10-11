@@ -8,3 +8,6 @@ edition = "2021"
 [dependencies]
 derive_more = "0.99.17"
 enum-as-inner = "0.5.1"
+num = "0.4.0"
+raylib = "3.7.0"
+lerp = "0.4.0"
